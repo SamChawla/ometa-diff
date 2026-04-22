@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -71,5 +72,5 @@ class CatalogChangelog(BaseModel):
     major_changes: int
     minor_changes: int
     entries: list[EntityDiff] = Field(default_factory=list)
-    top_changers: list[dict] = Field(default_factory=list)
+    top_changers: list[dict[str, Any]] = Field(default_factory=list)
     """Sorted list of most active users, e.g. [{'user': 'admin', 'change_count': 12}]."""
