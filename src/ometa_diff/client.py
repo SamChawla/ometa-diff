@@ -28,6 +28,32 @@ SUPPORTED_ENTITY_TYPES: frozenset[str] = frozenset(
     }
 )
 
+# OM REST API uses plural paths — map singular type names to their URL segments.
+_ENTITY_TYPE_TO_PATH: dict[str, str] = {
+    "table": "tables",
+    "database": "databases",
+    "databaseSchema": "databaseSchemas",
+    "dashboard": "dashboards",
+    "chart": "charts",
+    "pipeline": "pipelines",
+    "topic": "topics",
+    "mlmodel": "mlmodels",
+    "container": "containers",
+    "storedProcedure": "storedProcedures",
+    "searchIndex": "searchIndexes",
+    "glossaryTerm": "glossaryTerms",
+    "tag": "tags",
+    "dataProduct": "dataProducts",
+}
+
+
+def _entity_path(entity_type: str) -> str:
+    """Return the plural REST path segment for an entity type.
+
+    Falls back to appending 's' for unknown types.
+    """
+    return _ENTITY_TYPE_TO_PATH.get(entity_type, f"{entity_type}s")
+
 
 def client_from_env() -> OMVersionClient:
     """Create an OMVersionClient from environment variables.
@@ -113,10 +139,31 @@ class OMVersionClient:
             entity_id: UUID of the entity.
 
         Returns:
-            Sorted list of version strings, e.g. ['0.1', '0.2', '0.3'].
+            Sorted list of version strings, e.g. ['0.1', '0.2', '1.2'].
+
+        Note:
+            OM returns each version as a full JSON snapshot string; we extract
+            just the 'version' field from each and sort numerically.
         """
-        data = self._get(f"/v1/{entity_type}/{entity_id}/versions")
-        return data.get("versions", [])
+        import json
+
+        data = self._get(f"/v1/{_entity_path(entity_type)}/{entity_id}/versions")
+        raw = data.get("versions", [])
+        versions: list[float] = []
+        for item in raw:
+            if isinstance(item, str):
+                try:
+                    snap = json.loads(item)
+                    v = snap.get("version")
+                except (json.JSONDecodeError, AttributeError):
+                    continue
+            elif isinstance(item, dict):
+                v = item.get("version")
+            else:
+                v = item
+            if v is not None:
+                versions.append(float(v))
+        return [str(v) for v in sorted(versions)]
 
     def get_version(self, entity_type: str, entity_id: str, version: str) -> dict:
         """Fetch a specific version snapshot of an entity.
@@ -129,7 +176,7 @@ class OMVersionClient:
         Returns:
             Raw entity JSON at that version.
         """
-        return self._get(f"/v1/{entity_type}/{entity_id}/versions/{version}")
+        return self._get(f"/v1/{_entity_path(entity_type)}/{entity_id}/versions/{version}")
 
     def resolve_fqn(self, entity_type: str, fqn: str) -> dict:
         """Resolve a fully-qualified name to the full entity dict (including id).
@@ -145,7 +192,7 @@ class OMVersionClient:
             OMNotFoundError: If the FQN does not exist.
         """
         try:
-            return self._get(f"/v1/{entity_type}/name/{fqn}")
+            return self._get(f"/v1/{_entity_path(entity_type)}/name/{fqn}")
         except OMNotFoundError:
             raise OMNotFoundError(f"Entity '{fqn}' not found. Check the fully qualified name.")
 

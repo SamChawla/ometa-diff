@@ -54,6 +54,14 @@ def _fmt_to_output_format(fmt: FormatOption):  # type: ignore[return]
     return OutputFormat(fmt.value)
 
 
+def _print_output(text: str, fmt: FormatOption) -> None:
+    """Print output, routing markdown/JSON through plain print to avoid Rich encoding issues."""
+    if fmt == FormatOption.terminal:
+        _console.print(text)
+    else:
+        print(text)
+
+
 @app.command()
 def diff(
     entity_type: str = typer.Argument(..., help="Entity type: table, dashboard, pipeline, …"),
@@ -88,12 +96,12 @@ def diff(
                 _console.print(f"No changes found for [bold]{fqn}[/bold] in the last {since}.")
                 return
             for d in diffs:
-                _console.print(format_diff(d, output_fmt))
+                _print_output(format_diff(d, output_fmt), fmt)
         else:
             result = differ.diff_entity(
                 entity_type, fqn, from_version=from_version, to_version=to_version
             )
-            _console.print(format_diff(result, output_fmt))
+            _print_output(format_diff(result, output_fmt), fmt)
     except NoDiffAvailable as exc:
         _err.print(f"[yellow]{exc}[/yellow]")
         raise typer.Exit(1)
@@ -151,7 +159,7 @@ def changelog(
         _err.print(f"[red]OpenMetadata API error: {exc}[/red]")
         raise typer.Exit(1)
 
-    _console.print(format_changelog(log, output_fmt))
+    _print_output(format_changelog(log, output_fmt), fmt)
 
 
 @app.command()

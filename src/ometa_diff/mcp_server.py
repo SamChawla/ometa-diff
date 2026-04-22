@@ -22,8 +22,8 @@ def create_server() -> Any:
 
     from mcp.server.fastmcp import FastMCP
 
+    import ometa_diff.client as _om_client
     from ometa_diff.changelog import ChangelogBuilder
-    from ometa_diff.client import client_from_env
     from ometa_diff.differ import MetadataDiffer
     from ometa_diff.exceptions import NoDiffAvailable, OmetaDiffError
     from ometa_diff.formatter import OutputFormat, format_changelog, format_diff
@@ -69,7 +69,7 @@ def create_server() -> Any:
             Formatted diff report as markdown text.
         """
         try:
-            client = client_from_env()
+            client = _om_client.client_from_env()
             differ = MetadataDiffer(client)
             result = differ.diff_entity(
                 entity_type, entity_fqn, from_version=from_version, to_version=to_version
@@ -110,7 +110,7 @@ def create_server() -> Any:
             Aggregated changelog as markdown text.
         """
         try:
-            client = client_from_env()
+            client = _om_client.client_from_env()
             builder = ChangelogBuilder(client)
 
             if scope.startswith("service:"):
@@ -158,7 +158,7 @@ def create_server() -> Any:
             Summary statistics as markdown text.
         """
         try:
-            client = client_from_env()
+            client = _om_client.client_from_env()
             builder = ChangelogBuilder(client)
             log = builder.for_entity_type("table", since_days=since_days)
 

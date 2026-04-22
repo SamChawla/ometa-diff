@@ -20,22 +20,22 @@ class OutputFormat(str, Enum):
 
 
 _SEVERITY_LABEL = {
-    ChangeSeverity.MAJOR: "[bold red]● MAJOR[/bold red]",
-    ChangeSeverity.MINOR: "[bold yellow]● MINOR[/bold yellow]",
-    ChangeSeverity.PATCH: "[bold green]● PATCH[/bold green]",
+    ChangeSeverity.MAJOR: "[bold red]* MAJOR[/bold red]",
+    ChangeSeverity.MINOR: "[bold yellow]* MINOR[/bold yellow]",
+    ChangeSeverity.PATCH: "[bold green]* PATCH[/bold green]",
 }
 
 _SEVERITY_MD = {
-    ChangeSeverity.MAJOR: "🔴 MAJOR",
-    ChangeSeverity.MINOR: "🟡 MINOR",
-    ChangeSeverity.PATCH: "🟢 PATCH",
+    ChangeSeverity.MAJOR: "[MAJOR]",
+    ChangeSeverity.MINOR: "[MINOR]",
+    ChangeSeverity.PATCH: "[PATCH]",
 }
 
 
 def _truncate(value: object, limit: int = 80) -> str:
     """Truncate a value to a safe display length."""
     s = str(value)
-    return s[:limit] + "…" if len(s) > limit else s
+    return s[:limit] + "..." if len(s) > limit else s
 
 
 # ---------------------------------------------------------------------------
@@ -50,9 +50,9 @@ def _format_diff_terminal(diff: EntityDiff) -> str:
     # Header
     lines.append(f"[bold cyan]{diff.entity_fqn}[/bold cyan] [dim]({diff.entity_type})[/dim]")
     lines.append(
-        f"[bold]v{diff.from_version}[/bold] → [bold]v{diff.to_version}[/bold]"
-        f"  [dim]│[/dim]  Changed by: [cyan]{diff.updated_by}[/cyan]"
-        f"  [dim]│  {diff.updated_at.strftime('%Y-%m-%d %H:%M')} UTC[/dim]"
+        f"[bold]v{diff.from_version}[/bold] -> [bold]v{diff.to_version}[/bold]"
+        f"  [dim]|[/dim]  Changed by: [cyan]{diff.updated_by}[/cyan]"
+        f"  [dim]|  {diff.updated_at.strftime('%Y-%m-%d %H:%M')} UTC[/dim]"
     )
     lines.append(f"[italic]{diff.summary}[/italic]")
 
@@ -61,7 +61,7 @@ def _format_diff_terminal(diff: EntityDiff) -> str:
         for change in diff.changes:
             label = _SEVERITY_LABEL[change.severity]
             ct = change.change_type.value.upper()
-            lines.append(f"  {label}  [bold]{change.field_path}[/bold] — {ct}")
+            lines.append(f"  {label}  [bold]{change.field_path}[/bold] - {ct}")
             if change.change_type == ChangeType.MODIFIED:
                 if change.old_value is not None:
                     lines.append(f"             [red]- {_truncate(change.old_value)}[/red]")
@@ -80,7 +80,7 @@ def _format_diff_markdown(diff: EntityDiff) -> str:
     lines.append(f"## `{diff.entity_fqn}` ({diff.entity_type})")
     lines.append("")
     lines.append(
-        f"**v{diff.from_version} → v{diff.to_version}**"
+        f"**v{diff.from_version} -> v{diff.to_version}**"
         f" | Changed by: `{diff.updated_by}`"
         f" | {diff.updated_at.strftime('%Y-%m-%d %H:%M')} UTC"
     )
@@ -135,7 +135,7 @@ def _format_changelog_terminal(log: CatalogChangelog) -> str:
     from_str = log.from_date.strftime("%Y-%m-%d")
     to_str = log.to_date.strftime("%Y-%m-%d")
     lines.append(f"[bold cyan]Catalog Changelog:[/bold cyan] [bold]{log.scope}[/bold]")
-    lines.append(f"[dim]{from_str} → {to_str}[/dim]")
+    lines.append(f"[dim]{from_str} -> {to_str}[/dim]")
     lines.append("")
 
     major = log.major_changes
@@ -143,8 +143,8 @@ def _format_changelog_terminal(log: CatalogChangelog) -> str:
     patch = log.total_changes - major - minor
     lines.append(
         f"[bold]{log.total_entities_changed}[/bold] entities changed"
-        f"  [dim]│[/dim]  [bold]{log.total_changes}[/bold] changes"
-        f"  [dim]│[/dim]  [bold red]{major}[/bold red] major"
+        f"  [dim]|[/dim]  [bold]{log.total_changes}[/bold] changes"
+        f"  [dim]|[/dim]  [bold red]{major}[/bold red] major"
         f"  [bold yellow]{minor}[/bold yellow] minor"
         f"  [bold green]{patch}[/bold green] patch"
     )
@@ -157,11 +157,11 @@ def _format_changelog_terminal(log: CatalogChangelog) -> str:
 
     if log.entries:
         lines.append("")
-        lines.append("[dim]─── Entities ──────────────────────────────────[/dim]")
+        lines.append("[dim]--- Entities -------------------------------------------[/dim]")
         for entry in log.entries:
-            sev_flag = "[red]●[/red]" if entry.is_major else "[yellow]●[/yellow]"
+            sev_flag = "[red]*[/red]" if entry.is_major else "[yellow]*[/yellow]"
             n = len(entry.changes)
-            v_range = f"v{entry.from_version}→v{entry.to_version}"
+            v_range = f"v{entry.from_version}->v{entry.to_version}"
             noun = "change" if n == 1 else "changes"
             lines.append(
                 f"  {sev_flag} [bold]{entry.entity_fqn}[/bold]  [dim]{n} {noun} ({v_range})[/dim]"
@@ -180,7 +180,7 @@ def _format_changelog_markdown(log: CatalogChangelog) -> str:
 
     lines.append(f"# Catalog Changelog: {log.scope}")
     lines.append("")
-    lines.append(f"**Period:** {from_str} → {to_str}")
+    lines.append(f"**Period:** {from_str} -> {to_str}")
     lines.append("")
     lines.append("## Summary")
     lines.append("")
@@ -189,8 +189,8 @@ def _format_changelog_markdown(log: CatalogChangelog) -> str:
         "\n|--------|-------|"
         f"\n| Entities changed | {log.total_entities_changed} |"
         f"\n| Total changes | {log.total_changes} |"
-        f"\n| Major changes | 🔴 {log.major_changes} |"
-        f"\n| Minor changes | 🟡 {log.minor_changes} |"
+        f"\n| Major changes | {log.major_changes} |"
+        f"\n| Minor changes | {log.minor_changes} |"
     )
 
     if log.top_changers:
@@ -207,12 +207,12 @@ def _format_changelog_markdown(log: CatalogChangelog) -> str:
         lines.append("## Changed Entities")
         lines.append("")
         for entry in log.entries:
-            sev = "🔴" if entry.is_major else "🟡"
+            sev = "[MAJOR]" if entry.is_major else "[MINOR]"
             n = len(entry.changes)
             lines.append(
                 f"- {sev} **{entry.entity_fqn}** ({entry.entity_type})"
-                f" — {n} change{'s' if n != 1 else ''}"
-                f" (v{entry.from_version}→v{entry.to_version}, by `{entry.updated_by}`)"
+                f" - {n} change{'s' if n != 1 else ''}"
+                f" (v{entry.from_version}->v{entry.to_version}, by `{entry.updated_by}`)"
             )
 
     return "\n".join(lines)
