@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pytest tests/test_differ.py -v)",
+      "Bash(ruff check *)",
+      "Bash(ruff format *)",
+      "Bash(pytest tests/ -v)",
+      "Bash(pytest tests/ -v --tb=short)"
+    ]
+  }
+}

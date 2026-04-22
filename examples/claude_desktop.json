@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ometa-diff": {
+      "command": "ometa-diff",
+      "args": ["serve"],
+      "env": {
+        "OPENMETADATA_HOST": "http://localhost:8585/api",
+        "OPENMETADATA_JWT_TOKEN": "<your-jwt-token-here>"
+      }
+    }
+  }
+}
