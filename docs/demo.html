@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ometa-diff — Metadata Version-Diff Intelligence for OpenMetadata</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --accent:    #58a6ff;
+      --green:     #3fb950;
+      --red:       #f85149;
+      --yellow:    #d29922;
+      --purple:    #bc8cff;
+      --cyan:      #79c0ff;
+      --term-bg:   #010409;
+      --radius:    8px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ── */
+    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Navbar ── */
+    nav {
+      border-bottom: 1px solid var(--border);
+      padding: 14px 0;
+      position: sticky; top: 0;
+      background: rgba(13,17,23,0.92);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+    }
+    nav .inner {
+      max-width: 900px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-brand { font-size: 1.1rem; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+    .nav-brand span { color: var(--accent); }
+    .nav-links { display: flex; gap: 20px; font-size: 0.9rem; color: var(--muted); }
+    .nav-links a { color: var(--muted); }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .badge {
+      display: inline-block; font-size: 0.72rem; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+      background: #1f2937; border: 1px solid var(--border);
+      color: var(--muted); letter-spacing: 0.3px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 72px 24px 60px;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(88,166,255,0.08); border: 1px solid rgba(88,166,255,0.2);
+      color: var(--accent); border-radius: 20px;
+      padding: 4px 14px; font-size: 0.8rem; font-weight: 600;
+      margin-bottom: 24px; letter-spacing: 0.3px;
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.2rem);
+      font-weight: 800; letter-spacing: -1px;
+      line-height: 1.15; margin-bottom: 20px;
+    }
+    .hero h1 .accent { color: var(--accent); }
+    .hero p {
+      font-size: 1.15rem; color: var(--muted);
+      max-width: 600px; margin: 0 auto 36px;
+    }
+    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 22px; border-radius: var(--radius);
+      font-size: 0.92rem; font-weight: 600; cursor: pointer;
+      border: none; transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: #0d1117; }
+    .btn-secondary {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .install-pill {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--term-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 18px;
+      font-family: "SF Mono", "Fira Code", monospace; font-size: 0.9rem;
+      color: var(--green); margin-top: 12px;
+    }
+    .install-pill .prompt { color: var(--muted); }
+
+    /* ── Section ── */
+    section { padding: 56px 0; border-top: 1px solid var(--border); }
+    .section-label {
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 1.2px;
+      text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+    }
+    h2 {
+      font-size: 1.8rem; font-weight: 700;
+      letter-spacing: -0.5px; margin-bottom: 12px;
+    }
+    .subtitle { color: var(--muted); font-size: 1rem; margin-bottom: 36px; }
+
+    /* ── Steps ── */
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+    .step {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+    }
+    .step-num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(88,166,255,0.12); border: 1px solid rgba(88,166,255,0.3);
+      color: var(--accent); font-weight: 700; font-size: 0.85rem;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
+    }
+    .step h3 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; }
+    .step p { font-size: 0.88rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── Terminal ── */
+    .terminal {
+      background: var(--term-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; margin: 20px 0;
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      font-size: 0.84rem; line-height: 1.65;
+    }
+    .term-bar {
+      background: #1c2128; border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .term-dots { display: flex; gap: 6px; }
+    .term-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+    }
+    .term-dot.red    { background: #ff5f57; }
+    .term-dot.yellow { background: #febc2e; }
+    .term-dot.green  { background: #28c840; }
+    .term-title { font-size: 0.75rem; color: var(--muted); }
+    .term-body { padding: 16px 20px; overflow-x: auto; }
+
+    .c-prompt { color: var(--muted); }
+    .c-cmd    { color: var(--text); font-weight: 600; }
+    .c-arg    { color: var(--cyan); }
+    .c-flag   { color: var(--purple); }
+    .c-fqn    { color: var(--yellow); font-weight: 600; }
+    .c-ver    { color: var(--accent); }
+    .c-major  { color: var(--red); font-weight: 700; }
+    .c-minor  { color: var(--yellow); font-weight: 700; }
+    .c-patch  { color: var(--green); font-weight: 700; }
+    .c-dim    { color: var(--muted); }
+    .c-green  { color: var(--green); }
+    .c-red    { color: var(--red); }
+    .c-cyan   { color: var(--cyan); }
+    .c-bold   { font-weight: 700; }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    .tab {
+      padding: 9px 18px; font-size: 0.88rem; font-weight: 500;
+      color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+      transition: color 0.15s; user-select: none;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Code block ── */
+    .code-block {
+      position: relative;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; margin: 16px 0;
+    }
+    .code-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; border-bottom: 1px solid var(--border);
+      font-size: 0.75rem; color: var(--muted);
+    }
+    .copy-btn {
+      background: none; border: 1px solid var(--border);
+      color: var(--muted); border-radius: 4px;
+      padding: 3px 10px; font-size: 0.72rem; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .copy-btn:hover { color: var(--text); border-color: var(--muted); }
+    .copy-btn.copied { color: var(--green); border-color: var(--green); }
+    pre {
+      padding: 16px 18px; overflow-x: auto;
+      font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+      font-size: 0.84rem; line-height: 1.7;
+      color: var(--text);
+    }
+    pre .kw   { color: var(--purple); }
+    pre .str  { color: var(--green); }
+    pre .key  { color: var(--cyan); }
+    pre .num  { color: var(--accent); }
+    pre .cmt  { color: var(--muted); font-style: italic; }
+
+    /* ── Diff table ── */
+    .diff-table {
+      width: 100%; border-collapse: collapse; font-size: 0.85rem;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .diff-table th {
+      background: #1c2128; padding: 10px 14px; text-align: left;
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px;
+      text-transform: uppercase; color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .diff-table td {
+      padding: 10px 14px; border-bottom: 1px solid rgba(48,54,61,0.5);
+      vertical-align: top; font-family: "SF Mono", monospace;
+    }
+    .diff-table tr:last-child td { border-bottom: none; }
+    .sev-major { color: var(--red);    font-weight: 700; }
+    .sev-minor { color: var(--yellow); font-weight: 700; }
+    .sev-patch { color: var(--green);  font-weight: 700; }
+    .val-old { color: var(--red);   font-size: 0.8rem; }
+    .val-new { color: var(--green); font-size: 0.8rem; }
+    .field { color: var(--cyan); }
+
+    /* ── MCP flow ── */
+    .flow {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; flex-wrap: wrap; margin: 32px 0;
+    }
+    .flow-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 22px; text-align: center;
+      min-width: 130px;
+    }
+    .flow-box .icon { font-size: 1.6rem; margin-bottom: 6px; }
+    .flow-box .label { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+    .flow-box .sub { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+    .flow-arrow {
+      color: var(--muted); font-size: 1.4rem; padding: 0 8px;
+      flex-shrink: 0;
+    }
+
+    /* ── Cards grid ── */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px;
+    }
+    .card-icon { font-size: 1.4rem; margin-bottom: 10px; }
+    .card h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; }
+    .card p  { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border); padding: 32px 0;
+      text-align: center; font-size: 0.82rem; color: var(--muted);
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<!-- ═══ NAVBAR ═══ -->
+<nav>
+  <div class="inner">
+    <span class="nav-brand"><span>ometa</span>-diff</span>
+    <div class="nav-links">
+      <a href="#quickstart">Quickstart</a>
+      <a href="#examples">Examples</a>
+      <a href="#mcp">MCP</a>
+      <a href="https://pypi.org/project/ometa-diff/" target="_blank">PyPI</a>
+      <span class="badge">WeMakeDevs × OpenMetadata</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<div class="hero">
+  <div class="hero-badge">🏆 Hackathon Submission 2026</div>
+  <h1>
+    Metadata <span class="accent">version-diff</span><br/>intelligence for OpenMetadata
+  </h1>
+  <p>
+    Know exactly what changed in your data catalog, when it changed, and how severe
+    the impact is — from the CLI or directly inside Claude.
+  </p>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="#quickstart">Get Started</a>
+    <a class="btn btn-secondary" href="https://github.com/SamChawla/ometa-diff" target="_blank">GitHub →</a>
+  </div>
+  <div style="margin-top:28px;">
+    <div class="install-pill">
+      <span class="prompt">$</span>
+      <span>pip install "ometa-diff[mcp]"</span>
+      <button class="copy-btn" onclick="copyText(this,'pip install \"ometa-diff[mcp]\"')">Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HOW IT WORKS ═══ -->
+<section id="quickstart">
+  <div class="container">
+    <div class="section-label">How it works</div>
+    <h2>Up and running in 3 steps</h2>
+    <p class="subtitle">No heavy dependencies. No openmetadata-ingestion. Just pip install and go.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Start OpenMetadata</h3>
+        <p>Run the official Docker Compose stack locally. Takes about 60 seconds to be ready.</p>
+        <div class="code-block" style="margin-top:12px;">
+          <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyBlock(this)">Copy</button></div>
+          <pre>curl -sL https://bit.ly/3VIBsRL -o docker-compose.yml
+docker compose up -d</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Get your JWT token</h3>
+        <p>Open <strong>Settings → Bots → Ingestion Bot</strong> in the OM UI. Copy the JWT token.</p>
+        <div class="code-block" style="margin-top:12px;">
+          <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyBlock(this)">Copy</button></div>
+          <pre><span style="color:#d29922">export</span> OPENMETADATA_HOST=\
+  http://localhost:8585/api
+<span style="color:#d29922">export</span> OPENMETADATA_JWT_TOKEN=\
+  &lt;your-jwt-token&gt;</pre>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Install &amp; run</h3>
+        <p>Install the package, then diff any entity by its fully qualified name.</p>
+        <div class="code-block" style="margin-top:12px;">
+          <div class="code-header"><span>bash</span><button class="copy-btn" onclick="copyBlock(this)">Copy</button></div>
+          <pre>pip install "ometa-diff[mcp]"
+
+ometa-diff diff table \
+  my_service.db.schema.payments</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ EXAMPLES ═══ -->
+<section id="examples">
+  <div class="container">
+    <div class="section-label">Live Examples</div>
+    <h2>See what changed in your catalog</h2>
+    <p class="subtitle">Three commands cover every observability need — entity diff, time-window changelog, and service-wide summary.</p>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(this,'tab-diff')">ometa-diff diff</div>
+      <div class="tab" onclick="switchTab(this,'tab-changelog')">ometa-diff changelog</div>
+      <div class="tab" onclick="switchTab(this,'tab-json')">--format json</div>
+    </div>
+
+    <!-- TAB: diff -->
+    <div class="tab-panel active" id="tab-diff">
+      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:14px;">
+        Compare the two most recent versions of any metadata entity. Shows every field-level change with severity.
+      </p>
+      <div class="code-block">
+        <div class="code-header"><span>Command</span><button class="copy-btn" onclick="copyBlock(this)">Copy</button></div>
+        <pre>ometa-diff diff table my_service.prod_db.public.payments</pre>
+      </div>
+
+      <div class="terminal">
+        <div class="term-bar">
+          <div class="term-dots">
+            <div class="term-dot red"></div>
+            <div class="term-dot yellow"></div>
+            <div class="term-dot green"></div>
+          </div>
+          <span class="term-title">Terminal</span>
+          <span></span>
+        </div>
+        <div class="term-body">
+<span class="c-prompt">$</span> <span class="c-cmd">ometa-diff</span> <span class="c-arg">diff</span> <span class="c-arg">table</span> <span class="c-arg">my_service.prod_db.public.payments</span>
+&nbsp;
+<span class="c-fqn">my_service.prod_db.public.payments</span> <span class="c-dim">(table)</span>
+<span class="c-bold c-ver">v0.2</span> <span class="c-dim">-&gt;</span> <span class="c-bold c-ver">v0.3</span>  <span class="c-dim">|</span>  Changed by: <span class="c-cyan">bob</span>  <span class="c-dim">|  2026-04-20 09:15 UTC</span>
+<span class="c-dim">2 changes: 1 major, 1 minor</span>
+&nbsp;
+  <span class="c-major">★ MAJOR</span>  <span class="c-bold">columns.payment_method</span> - REMOVED
+             <span class="c-red">- {'name': 'payment_method', 'dataType': 'VARCHAR'}</span>
+  <span class="c-minor">● MINOR</span>  <span class="c-bold">owner</span> - MODIFIED
+             <span class="c-red">- data_team</span>
+             <span class="c-green">+ payments_team</span>
+        </div>
+      </div>
+
+      <p style="margin:18px 0 10px;font-size:0.9rem;font-weight:600;">Field-by-field breakdown</p>
+      <table class="diff-table">
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Field</th>
+            <th>Change</th>
+            <th>Old Value</th>
+            <th>New Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="sev-major">★ MAJOR</td>
+            <td class="field">columns.payment_method</td>
+            <td>REMOVED</td>
+            <td class="val-old">VARCHAR — Payment method used</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td class="sev-minor">● MINOR</td>
+            <td class="field">owner</td>
+            <td>MODIFIED</td>
+            <td class="val-old">data_team</td>
+            <td class="val-new">payments_team</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top:18px;font-size:0.82rem;color:var(--muted);">
+        <strong style="color:var(--text)">Severity rules:</strong>
+        MAJOR = column removed / dataType changed / owner removed &nbsp;·&nbsp;
+        MINOR = description / tag / owner changed &nbsp;·&nbsp;
+        PATCH = cosmetic fields
+      </p>
+    </div>
+
+    <!-- TAB: changelog -->
+    <div class="tab-panel" id="tab-changelog">
+      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:14px;">
+        Aggregate all changes across a service, user, or entity type over a configurable time window.
+      </p>
+      <div class="code-block">
+        <div class="code-header"><span>Command</span><button class="copy-btn" onclick="copyBlock(this)">Copy</button></div>
+        <pre>ometa-diff changelog --service my_service --since 7d</pre>
+      </div>
+
+      <div class="terminal">
+        <div class="term-bar">
+          <div class="term-dots">
+            <div class="term-dot red"></div>
+            <div class="term-dot yellow"></div>
+            <div class="term-dot green"></div>
+          </div>
+          <span class="term-title">Terminal</span>
+          <span></span>
+        </div>
+        <div class="term-body">
+<span class="c-prompt">$</span> <span class="c-cmd">ometa-diff</span> <span class="c-arg">changelog</span> <span class="c-flag">--service</span> <span class="c-arg">my_service</span> <span class="c-flag">--since</span> <span class="c-arg">7d</span>
+&nbsp;
+<span class="c-bold c-cyan">Catalog Changelog:</span> <span class="c-bold">service:my_service</span>
+<span class="c-dim">2026-04-13 -&gt; 2026-04-20</span>
+&nbsp;
+<span class="c-bold">4</span> entities changed  <span class="c-dim">|</span>  <span class="c-bold">11</span> changes  <span class="c-dim">|</span>  <span class="c-major">2</span> major  <span class="c-minor">7</span> minor  <span class="c-patch">2</span> patch
+Top changers: <span class="c-cyan">alice</span> (5) <span class="c-cyan">bob</span> (4) <span class="c-cyan">data-ingest-bot</span> (2)
+&nbsp;
+<span class="c-dim">--- Entities -------------------------------------</span>
+  <span class="c-red">*</span> <span class="c-bold">my_service.prod_db.public.payments</span>  <span class="c-dim">2 changes (v0.2-&gt;v0.3)</span>
+  <span class="c-yellow">*</span> <span class="c-bold">my_service.prod_db.public.orders</span>    <span class="c-dim">4 changes (v0.5-&gt;v0.7)</span>
+  <span class="c-yellow">*</span> <span class="c-bold">my_service.prod_db.public.customers</span> <span class="c-dim">3 changes (v0.1-&gt;v0.2)</span>
+  <span class="c-yellow">*</span> <span class="c-bold">my_service.prod_db.public.products</span>  <span class="c-dim">2 changes (v0.3-&gt;v0.4)</span>
+        </div>
+      </div>
+
+      <div style="margin-top:18px;display:flex;gap:12px;flex-wrap:wrap;">
+        <div class="code-block" style="flex:1;min-width:240px;margin:0;">
+          <div class="code-header"><span>By user</span><button class="copy-btn" onclick="copyBlock(this)">Copy</button></div>
+          <pre>ometa-diff changelog \
+  --user alice --since 30d</pre>
+        </div>
+        <div class="code-block" style="flex:1;min-width:240px;margin:0;">
+          <div class="code-header"><span>By entity type</span><button class="copy-btn" onclick="copyBlock(this)">Copy</button></div>
+          <pre>ometa-diff changelog \
+  --type table --since 7d</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: json -->
+    <div class="tab-panel" id="tab-json">
+      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:14px;">
+        Every command supports <code style="color:var(--cyan)">--format json</code> and <code style="color:var(--cyan)">--format markdown</code> for programmatic use and CI pipelines.
+      </p>
+      <div class="code-block">
+        <div class="code-header"><span>Command</span><button class="copy-btn" onclick="copyBlock(this)">Copy</button></div>
+        <pre>ometa-diff diff table my_service.prod_db.public.payments --format json</pre>
+      </div>
+      <div class="code-block">
+        <div class="code-header"><span>JSON Output</span><button class="copy-btn" onclick="copyBlock(this)">Copy</button></div>
+        <pre>{
+  <span class="key">"entity_type"</span>: <span class="str">"table"</span>,
+  <span class="key">"entity_fqn"</span>: <span class="str">"my_service.prod_db.public.payments"</span>,
+  <span class="key">"from_version"</span>: <span class="str">"0.2"</span>,
+  <span class="key">"to_version"</span>: <span class="str">"0.3"</span>,
+  <span class="key">"updated_by"</span>: <span class="str">"bob"</span>,
+  <span class="key">"is_major"</span>: <span class="kw">true</span>,
+  <span class="key">"summary"</span>: <span class="str">"2 changes: 1 major, 1 minor"</span>,
+  <span class="key">"changes"</span>: [
+    {
+      <span class="key">"field_path"</span>: <span class="str">"columns.payment_method"</span>,
+      <span class="key">"change_type"</span>: <span class="str">"removed"</span>,
+      <span class="key">"severity"</span>: <span class="str">"major"</span>,
+      <span class="key">"old_value"</span>: { <span class="key">"name"</span>: <span class="str">"payment_method"</span>, <span class="key">"dataType"</span>: <span class="str">"VARCHAR"</span> },
+      <span class="key">"new_value"</span>: <span class="kw">null</span>
+    },
+    {
+      <span class="key">"field_path"</span>: <span class="str">"owner"</span>,
+      <span class="key">"change_type"</span>: <span class="str">"modified"</span>,
+      <span class="key">"severity"</span>: <span class="str">"minor"</span>,
+      <span class="key">"old_value"</span>: <span class="str">"data_team"</span>,
+      <span class="key">"new_value"</span>: <span class="str">"payments_team"</span>
+    }
+  ]
+}</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ MCP ═══ -->
+<section id="mcp">
+  <div class="container">
+    <div class="section-label">MCP Server</div>
+    <h2>Ask Claude about your catalog</h2>
+    <p class="subtitle">
+      ometa-diff ships as a Model Context Protocol server — drop it into any MCP-compatible
+      client and your AI assistant gains live metadata diff intelligence.
+    </p>
+
+    <div class="flow">
+      <div class="flow-box">
+        <div class="icon">🤖</div>
+        <div class="label">Claude / Cursor</div>
+        <div class="sub">MCP Client</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">
+        <div class="icon">⚡</div>
+        <div class="label">ometa-diff</div>
+        <div class="sub">MCP Server (STDIO)</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box">
+        <div class="icon">🗄️</div>
+        <div class="label">OpenMetadata</div>
+        <div class="sub">REST API</div>
+      </div>
+    </div>
+
+    <p style="font-size:0.9rem;font-weight:600;margin-bottom:12px;">Claude Desktop config</p>
+    <div class="code-block">
+      <div class="code-header">
+        <span>~/.config/claude/claude_desktop_config.json</span>
+        <button class="copy-btn" onclick="copyBlock(this)">Copy</button>
+      </div>
+      <pre>{
+  <span class="key">"mcpServers"</span>: {
+    <span class="key">"ometa-diff"</span>: {
+      <span class="key">"command"</span>: <span class="str">"uvx"</span>,
+      <span class="key">"args"</span>: [<span class="str">"--from"</span>, <span class="str">"ometa-diff[mcp]"</span>, <span class="str">"ometa-diff"</span>, <span class="str">"serve"</span>],
+      <span class="key">"env"</span>: {
+        <span class="key">"OPENMETADATA_HOST"</span>: <span class="str">"http://localhost:8585/api"</span>,
+        <span class="key">"OPENMETADATA_JWT_TOKEN"</span>: <span class="str">"&lt;your-jwt-token&gt;"</span>
+      }
+    }
+  }
+}</pre>
+    </div>
+
+    <p style="font-size:0.9rem;font-weight:600;margin:20px 0 12px;">Three tools exposed to the LLM</p>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">🔍</div>
+        <h4>metadata_diff</h4>
+        <p>Field-by-field diff between two versions of any entity. Triggered by: <em>"What changed in the payments table?"</em></p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📋</div>
+        <h4>metadata_changelog</h4>
+        <p>Aggregate changes across a service, user, or entity type. Triggered by: <em>"What did alice change this week?"</em></p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h4>metadata_change_summary</h4>
+        <p>Catalog-wide activity stats — total changes, severity breakdown, top changers. Covers tables, dashboards, pipelines, topics.</p>
+      </div>
+    </div>
+
+    <div class="terminal" style="margin-top:28px;">
+      <div class="term-bar">
+        <div class="term-dots">
+          <div class="term-dot red"></div>
+          <div class="term-dot yellow"></div>
+          <div class="term-dot green"></div>
+        </div>
+        <span class="term-title">Claude Desktop — example conversation</span>
+        <span></span>
+      </div>
+      <div class="term-body">
+<span class="c-cyan c-bold">User:</span>  What changed in the payments table recently?
+&nbsp;
+<span class="c-green c-bold">Claude:</span> <span class="c-dim">[calling metadata_diff…]</span>
+&nbsp;
+        The <span class="c-bold">payments</span> table had <span class="c-bold">2 changes</span> between v0.2 and v0.3:
+&nbsp;
+        <span class="c-major">⚠ MAJOR</span>  <span class="c-bold">columns.payment_method was removed.</span>
+        This is a breaking change — any downstream pipeline reading
+        this column will fail. <span class="c-red">Immediate review recommended.</span>
+&nbsp;
+        <span class="c-minor">● MINOR</span>  The <span class="c-bold">owner</span> changed from <em>data_team</em>
+        to <em>payments_team</em> (changed by bob on 2026-04-20).
+&nbsp;
+<span class="c-cyan c-bold">User:</span>  Show me all major changes across the whole catalog this week.
+&nbsp;
+<span class="c-green c-bold">Claude:</span> <span class="c-dim">[calling metadata_change_summary…]</span>
+&nbsp;
+        In the last 7 days across tables, dashboards, pipelines and topics:
+        • <span class="c-major">2 MAJOR</span> changes  • <span class="c-minor">7 MINOR</span>  • <span class="c-patch">2 PATCH</span>
+        Top changers: alice (5), bob (4), data-ingest-bot (2)
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ WHY ═══ -->
+<section>
+  <div class="container">
+    <div class="section-label">Why ometa-diff</div>
+    <h2>Built for the AI-native data team</h2>
+    <p class="subtitle">OpenMetadata already stores every version of every entity. ometa-diff makes that history actionable.</p>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">🚫</div>
+        <h4>No heavy deps</h4>
+        <p>Uses <code>httpx</code> directly — no <code>openmetadata-ingestion</code>, no JVM, no Spark.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎯</div>
+        <h4>Severity-aware</h4>
+        <p>Automatically classifies every change as MAJOR, MINOR, or PATCH so you know what actually matters.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔌</div>
+        <h4>Any MCP client</h4>
+        <p>Works with Claude Desktop, Cursor, VS Code + Copilot, Windsurf, Zed — any client that speaks MCP.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📦</div>
+        <h4>pip installable</h4>
+        <p>One command, three interfaces: CLI, Python library, and MCP server — all from the same package.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div class="container">
+    <p>
+      <strong>ometa-diff</strong> &nbsp;·&nbsp;
+      Apache 2.0 &nbsp;·&nbsp;
+      <a href="https://github.com/SamChawla/ometa-diff" target="_blank">GitHub</a> &nbsp;·&nbsp;
+      <a href="https://pypi.org/project/ometa-diff/" target="_blank">PyPI</a> &nbsp;·&nbsp;
+      Built for the <a href="https://wemakedevs.org" target="_blank">WeMakeDevs</a> × OpenMetadata Hackathon 2026
+    </p>
+  </div>
+</footer>
+
+<script>
+  // Tab switching
+  function switchTab(el, id) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById(id).classList.add('active');
+  }
+
+  // Copy button — reads the <pre> sibling
+  function copyBlock(btn) {
+    const pre = btn.closest('.code-block').querySelector('pre');
+    const text = pre.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+    });
+  }
+
+  // Copy button — explicit text
+  function copyText(btn, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+    });
+  }
+
+  // Smooth scroll for nav links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  });
+</script>
+</body>
+</html>
