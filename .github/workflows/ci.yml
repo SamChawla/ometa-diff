@@ -28,9 +28,7 @@ jobs:
         run: python -m pip install --upgrade pip build setuptools wheel
 
       - name: Install dependencies
-        # Install from GitHub at the exact commit under test so CI validates the
-        # pushed state, not a locally built editable install.
-        run: pip install "ometa-diff[dev] @ git+https://github.com/SamChawla/ometa-diff.git@${{ github.sha }}"
+        run: pip install -e ".[dev]"
 
       - name: Lint
         run: ruff check src/ tests/
