@@ -6,11 +6,20 @@ All snapshots mirror the real shape returned by:
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pytest
 
 from ometa_diff.client import OMVersionClient
+
+_ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def strip_ansi(text: str) -> str:
+    """Remove ANSI escape codes from a string."""
+    return _ANSI_ESCAPE.sub("", text)
+
 
 # ---------------------------------------------------------------------------
 # Table version snapshots

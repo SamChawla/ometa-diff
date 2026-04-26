@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 from ometa_diff.cli import app
 from ometa_diff.exceptions import NoDiffAvailable, OMConnectionError, OMNotFoundError
 from ometa_diff.models import CatalogChangelog, ChangeSeverity, ChangeType, EntityDiff, FieldChange
+from tests.conftest import strip_ansi
 
 runner = CliRunner()
 
@@ -68,7 +69,7 @@ class TestHelpCommands:
     def test_changelog_help(self):
         result = runner.invoke(app, ["changelog", "--help"])
         assert result.exit_code == 0
-        assert "--service" in result.output
+        assert "--service" in strip_ansi(result.output)
 
     def test_config_command(self):
         result = runner.invoke(app, ["config"])
