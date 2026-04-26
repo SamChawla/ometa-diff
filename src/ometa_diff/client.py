@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from typing import Any
 
@@ -45,6 +46,18 @@ _ENTITY_TYPE_TO_PATH: dict[str, str] = {
     "tag": "tags",
     "dataProduct": "dataProducts",
 }
+
+
+def _version_sort_key(v: str) -> tuple[int, ...]:
+    """Return a numeric sort key from a version string like '0.1' or '1.10.2'.
+
+    Falls back to (0,) for non-numeric versions so they sort to the front
+    rather than raising.
+    """
+    try:
+        return tuple(int(x) for x in v.split("."))
+    except ValueError:
+        return (0,)
 
 
 def _entity_path(entity_type: str) -> str:
@@ -107,12 +120,12 @@ class OMVersionClient:
         url = f"{self._host}{path}"
         try:
             response = self._http.get(url, params=params)
-        except httpx.ConnectError as exc:
+        except httpx.TimeoutException as exc:
+            raise OMConnectionError(f"Request timed out connecting to {self._host}.") from exc
+        except httpx.TransportError as exc:
             raise OMConnectionError(
                 f"Cannot connect to OpenMetadata at {self._host}. Is the server running?"
             ) from exc
-        except httpx.TimeoutException as exc:
-            raise OMConnectionError(f"Request timed out connecting to {self._host}.") from exc
 
         if response.status_code == 401:
             raise OMAuthError("Authentication failed. Check OPENMETADATA_JWT_TOKEN.")
@@ -145,15 +158,14 @@ class OMVersionClient:
             OM returns each version as a full JSON snapshot string; we extract
             just the 'version' field from each and sort numerically.
         """
-        import json
-
         data = self._get(f"/v1/{_entity_path(entity_type)}/{entity_id}/versions")
         raw = data.get("versions", [])
-        versions: list[float] = []
+        versions: list[str] = []
         for item in raw:
+            v: Any = None
             if isinstance(item, str):
                 try:
-                    snap = json.loads(item)
+                    snap: dict[str, Any] = json.loads(item)
                     v = snap.get("version")
                 except (json.JSONDecodeError, AttributeError):
                     continue
@@ -162,10 +174,10 @@ class OMVersionClient:
             else:
                 v = item
             if v is not None:
-                versions.append(float(v))
-        return [str(v) for v in sorted(versions)]
+                versions.append(str(v))
+        return sorted(versions, key=_version_sort_key)
 
-    def get_version(self, entity_type: str, entity_id: str, version: str) -> dict:
+    def get_version(self, entity_type: str, entity_id: str, version: str) -> dict[str, Any]:
         """Fetch a specific version snapshot of an entity.
 
         Args:
@@ -178,7 +190,7 @@ class OMVersionClient:
         """
         return self._get(f"/v1/{_entity_path(entity_type)}/{entity_id}/versions/{version}")
 
-    def resolve_fqn(self, entity_type: str, fqn: str) -> dict:
+    def resolve_fqn(self, entity_type: str, fqn: str) -> dict[str, Any]:
         """Resolve a fully-qualified name to the full entity dict (including id).
 
         Args:
@@ -193,15 +205,17 @@ class OMVersionClient:
         """
         try:
             return self._get(f"/v1/{_entity_path(entity_type)}/name/{fqn}")
-        except OMNotFoundError:
-            raise OMNotFoundError(f"Entity '{fqn}' not found. Check the fully qualified name.")
+        except OMNotFoundError as exc:
+            raise OMNotFoundError(
+                f"Entity '{fqn}' not found. Check the fully qualified name."
+            ) from exc
 
     def search_entities(
         self,
         query: str,
         entity_type: str | None = None,
         limit: int = 100,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """Search for entities using OM's search API.
 
         Args:

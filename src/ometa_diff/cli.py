@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import os
 import re
 from enum import Enum
+from typing import TYPE_CHECKING
 
 import typer
 from rich.console import Console
+
+if TYPE_CHECKING:
+    from ometa_diff.client import OMVersionClient
+    from ometa_diff.formatter import OutputFormat
 
 app = typer.Typer(
     name="ometa-diff",
@@ -15,15 +21,16 @@ app = typer.Typer(
 )
 
 _console = Console()
+_plain = Console(markup=False, highlight=False)
 _err = Console(stderr=True)
 
 
 class FormatOption(str, Enum):
     """CLI output format choices."""
 
-    terminal = "terminal"
-    markdown = "markdown"
-    json = "json"
+    TERMINAL = "terminal"
+    MARKDOWN = "markdown"
+    JSON = "json"
 
 
 def _parse_since_days(since: str) -> int:
@@ -35,7 +42,7 @@ def _parse_since_days(since: str) -> int:
     return int(match.group(1))
 
 
-def _build_client():  # type: ignore[return]
+def _build_client() -> OMVersionClient:
     """Create an OMVersionClient from env vars, exiting on missing token."""
     from ometa_diff.client import client_from_env
     from ometa_diff.exceptions import OMAuthError, OMConnectionError
@@ -47,7 +54,7 @@ def _build_client():  # type: ignore[return]
         raise typer.Exit(1)
 
 
-def _fmt_to_output_format(fmt: FormatOption):  # type: ignore[return]
+def _fmt_to_output_format(fmt: FormatOption) -> OutputFormat:
     """Map CLI FormatOption to formatter's OutputFormat enum."""
     from ometa_diff.formatter import OutputFormat
 
@@ -55,11 +62,13 @@ def _fmt_to_output_format(fmt: FormatOption):  # type: ignore[return]
 
 
 def _print_output(text: str, fmt: FormatOption) -> None:
-    """Print output, routing markdown/JSON through plain print to avoid Rich encoding issues."""
-    if fmt == FormatOption.terminal:
+    """Print output using Rich, suppressing markup for non-terminal formats."""
+    if fmt == FormatOption.TERMINAL:
         _console.print(text)
+    elif fmt == FormatOption.JSON:
+        _console.print_json(json=text)
     else:
-        print(text)
+        _plain.print(text)
 
 
 @app.command()
@@ -71,7 +80,7 @@ def diff(
     ),
     to_version: str | None = typer.Option(None, "--to", help="Later version (default: latest)"),
     since: str | None = typer.Option(None, "--since", help="Time window, e.g. 7d"),
-    fmt: FormatOption = typer.Option(FormatOption.terminal, "--format", "-f", help="Output format"),
+    fmt: FormatOption = typer.Option(FormatOption.TERMINAL, "--format", "-f", help="Output format"),
 ) -> None:
     """Show what changed between two versions of a metadata entity."""
     from ometa_diff.differ import MetadataDiffer
@@ -125,7 +134,7 @@ def changelog(
     user: str | None = typer.Option(None, "--user", help="Filter by username"),
     entity_type: str | None = typer.Option(None, "--type", help="Filter by entity type"),
     since: str = typer.Option("7d", "--since", help="Time window, e.g. 7d, 30d"),
-    fmt: FormatOption = typer.Option(FormatOption.terminal, "--format", "-f", help="Output format"),
+    fmt: FormatOption = typer.Option(FormatOption.TERMINAL, "--format", "-f", help="Output format"),
 ) -> None:
     """Show recent metadata changes across your data catalog."""
     from ometa_diff.changelog import ChangelogBuilder
@@ -173,8 +182,6 @@ def serve() -> None:
 @app.command()
 def config() -> None:
     """Show current configuration (host, auth status)."""
-    import os
-
     host = os.environ.get("OPENMETADATA_HOST", "(not set — defaults to http://localhost:8585/api)")
     token = os.environ.get("OPENMETADATA_JWT_TOKEN", "")
     token_display = f"{token[:8]}…" if len(token) > 8 else ("(not set)" if not token else token)

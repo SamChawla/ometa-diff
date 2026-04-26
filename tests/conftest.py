@@ -6,6 +6,8 @@ All snapshots mirror the real shape returned by:
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from ometa_diff.client import OMVersionClient
@@ -16,7 +18,7 @@ from ometa_diff.client import OMVersionClient
 
 
 @pytest.fixture
-def table_version_v1() -> dict:
+def table_version_v1() -> dict[str, Any]:
     """Realistic table entity snapshot at version 0.1 (initial creation)."""
     return {
         "id": "a1b2c3d4-0001-0001-0001-000000000001",
@@ -61,7 +63,7 @@ def table_version_v1() -> dict:
 
 
 @pytest.fixture
-def table_version_v2() -> dict:
+def table_version_v2() -> dict[str, Any]:
     """Same table at version 0.2: description changed, column added, tag added."""
     return {
         "id": "a1b2c3d4-0001-0001-0001-000000000001",
@@ -115,7 +117,7 @@ def table_version_v2() -> dict:
 
 
 @pytest.fixture
-def table_version_v3() -> dict:
+def table_version_v3() -> dict[str, Any]:
     """Same table at version 0.3: column removed (MAJOR), owner changed (MINOR)."""
     return {
         "id": "a1b2c3d4-0001-0001-0001-000000000001",

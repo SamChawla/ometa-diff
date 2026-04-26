@@ -37,8 +37,8 @@ class FieldChange(BaseModel):
     """Dot-notation path to the changed field, e.g. 'columns.payment_id.description'."""
     change_type: ChangeType
     severity: ChangeSeverity
-    old_value: object | None = None
-    new_value: object | None = None
+    old_value: Any | None = None
+    new_value: Any | None = None
 
 
 class EntityDiff(BaseModel):

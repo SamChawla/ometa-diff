@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Local Docker volumes (OM dev stack)
+docker-volume/
+
+# Internal planning doc — not for public repo
+ometa-diff-final-plan.md

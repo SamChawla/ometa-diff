@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import sys,json,subprocess,os; d=json.load(sys.stdin); cmd=d.get('tool_input',{}).get('command',''); sys.exit(0) if 'git commit' not in cmd else None; os.chdir('e:/ometa-diff'); r=subprocess.run(['ruff','check','src/','tests/'],capture_output=True); rc=subprocess.run(['ruff','format','--check','src/','tests/'],capture_output=True); pl=subprocess.run(['pylint','src/ometa_diff/','--rcfile=.pylintrc','--score=no'],capture_output=True); pt=subprocess.run(['pytest','tests/','-q','--ignore=tests/test_integration.py'],capture_output=True); failed=[n for n,p in [('ruff-check',r),('ruff-format',rc),('pylint',pl),('pytest',pt)] if p.returncode!=0]; out=json.dumps({'continue':len(failed)==0,'stopReason':'Pre-commit checks failed: '+', '.join(failed)}) if failed else json.dumps({'continue':True}); print(out)\"",
+            "timeout": 120,
+            "statusMessage": "Running pre-commit checks (ruff, pylint, pytest)..."
+          }
+        ]
+      }
+    ]
+  }
+}

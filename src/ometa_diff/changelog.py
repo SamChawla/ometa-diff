@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 from ometa_diff.client import OMVersionClient
 from ometa_diff.differ import MetadataDiffer
-from ometa_diff.exceptions import NoDiffAvailable, OMNotFoundError
+from ometa_diff.exceptions import NoDiffAvailable, OmetaDiffError, OMNotFoundError
 from ometa_diff.models import CatalogChangelog, ChangeSeverity, EntityDiff
 
 
@@ -45,7 +46,7 @@ def _aggregate(
 
 
 def _diffs_for_entities(
-    entities: list[dict],
+    entities: list[dict[str, Any]],
     differ: MetadataDiffer,
     since_days: int,
     user_filter: str | None = None,
@@ -66,7 +67,7 @@ def _diffs_for_entities(
             continue
         try:
             diffs = differ.diff_entity_since(entity_type, fqn, since_days=since_days)
-        except (NoDiffAvailable, OMNotFoundError, KeyError):
+        except (NoDiffAvailable, OMNotFoundError, OmetaDiffError, KeyError, ValueError):
             continue
         if user_filter:
             diffs = [d for d in diffs if d.updated_by == user_filter]

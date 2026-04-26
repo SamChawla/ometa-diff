@@ -32,11 +32,19 @@ dependencies = [
 mcp = ["mcp>=1.0.0"]
 dev = ["pytest>=8.0.0", "ruff>=0.5.0", "respx>=0.21.0"]
 
+[project.urls]
+Homepage = "https://github.com/SamChawla/ometa-diff"
+Repository = "https://github.com/SamChawla/ometa-diff"
+Issues = "https://github.com/SamChawla/ometa-diff/issues"
+
 [project.scripts]
 ometa-diff = "ometa_diff.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ometa_diff"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["docker-volume/", "docker-compose-om.yml"]
 
 [tool.ruff]
 line-length = 100
@@ -47,3 +55,6 @@ select = ["E", "F", "I", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: requires a live OpenMetadata instance (set OPENMETADATA_HOST and OPENMETADATA_JWT_TOKEN)",
+]

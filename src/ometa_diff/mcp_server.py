@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from typing import Any
-
-_mcp_available = importlib.util.find_spec("mcp") is not None
 
 
 def create_server() -> Any:
@@ -17,7 +16,7 @@ def create_server() -> Any:
     Raises:
         ImportError: If the 'mcp' extra is not installed.
     """
-    if not _mcp_available:
+    if importlib.util.find_spec("mcp") is None:
         raise ImportError("MCP SDK not installed. Run: pip install 'ometa-diff[mcp]'")
 
     from mcp.server.fastmcp import FastMCP
@@ -51,7 +50,7 @@ def create_server() -> Any:
             "Requires OPENMETADATA_HOST and OPENMETADATA_JWT_TOKEN environment variables."
         ),
     )
-    def metadata_diff(
+    def metadata_diff(  # pyright: ignore[reportUnusedFunction]
         entity_type: str,
         entity_fqn: str,
         from_version: str | None = None,
@@ -80,7 +79,8 @@ def create_server() -> Any:
         except OmetaDiffError as exc:
             return f"Error: {exc}"
         except Exception as exc:  # noqa: BLE001
-            return f"Unexpected error: {exc}"
+            print(f"ometa-diff unexpected error: {exc}", file=sys.stderr)
+            return f"Unexpected error: {type(exc).__name__}: {exc}"
 
     # ------------------------------------------------------------------
     # Tool 2: metadata_changelog
@@ -96,7 +96,7 @@ def create_server() -> Any:
             "Requires OPENMETADATA_HOST and OPENMETADATA_JWT_TOKEN environment variables."
         ),
     )
-    def metadata_changelog(
+    def metadata_changelog(  # pyright: ignore[reportUnusedFunction]
         scope: str,
         since_days: int = 7,
     ) -> str:
@@ -129,7 +129,8 @@ def create_server() -> Any:
         except OmetaDiffError as exc:
             return f"Error: {exc}"
         except Exception as exc:  # noqa: BLE001
-            return f"Unexpected error: {exc}"
+            print(f"ometa-diff unexpected error: {exc}", file=sys.stderr)
+            return f"Unexpected error: {type(exc).__name__}: {exc}"
 
     # ------------------------------------------------------------------
     # Tool 3: metadata_change_summary
@@ -146,7 +147,7 @@ def create_server() -> Any:
             "Requires OPENMETADATA_HOST and OPENMETADATA_JWT_TOKEN environment variables."
         ),
     )
-    def metadata_change_summary(
+    def metadata_change_summary(  # pyright: ignore[reportUnusedFunction]
         since_days: int = 7,
     ) -> str:
         """Return a high-level summary of catalog-wide metadata activity.
@@ -189,7 +190,8 @@ def create_server() -> Any:
         except OmetaDiffError as exc:
             return f"Error: {exc}"
         except Exception as exc:  # noqa: BLE001
-            return f"Unexpected error: {exc}"
+            print(f"ometa-diff unexpected error: {exc}", file=sys.stderr)
+            return f"Unexpected error: {type(exc).__name__}: {exc}"
 
     return mcp
 

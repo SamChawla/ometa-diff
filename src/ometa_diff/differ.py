@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Any, cast
 
 from ometa_diff.client import OMVersionClient
 from ometa_diff.exceptions import NoDiffAvailable
@@ -19,6 +20,8 @@ NOISE_FIELDS: frozenset[str] = frozenset(
         "incrementalChangeDescription",
     }
 )
+
+_EMPTY_FROZENSET: frozenset[str] = frozenset()
 
 # Fields to treat as a single atomic value rather than recursing into sub-fields.
 ATOMIC_FIELDS: frozenset[str] = frozenset(
@@ -95,11 +98,11 @@ def _classify_severity(field_path: str, change_type: ChangeType) -> ChangeSeveri
 
 
 def _compare_keyed_arrays(
-    old_list: list[dict],
-    new_list: list[dict],
+    old_list: list[dict[str, Any]],
+    new_list: list[dict[str, Any]],
     path: str,
     id_key: str,
-    extra_noise: frozenset[str] = frozenset(),
+    extra_noise: frozenset[str] = _EMPTY_FROZENSET,
 ) -> list[FieldChange]:
     """Compare two arrays whose items are matched by a stable identity key.
 
@@ -150,10 +153,10 @@ def _compare_keyed_arrays(
 
 
 def _compare_dicts(
-    old: dict,
-    new: dict,
+    old: dict[str, Any],
+    new: dict[str, Any],
     path: str = "",
-    extra_noise: frozenset[str] = frozenset(),
+    extra_noise: frozenset[str] = _EMPTY_FROZENSET,
 ) -> list[FieldChange]:
     """Recursively compare two dicts and return a flat list of FieldChange objects.
 
@@ -171,8 +174,8 @@ def _compare_dicts(
         field_path = f"{path}.{key}" if path else key
         in_old = key in old
         in_new = key in new
-        old_val = old.get(key)
-        new_val = new.get(key)
+        old_val: Any = old.get(key)
+        new_val: Any = new.get(key)
 
         if not in_old:
             severity = _classify_severity(field_path, ChangeType.ADDED)
@@ -218,9 +221,17 @@ def _compare_dicts(
                 )
             )
         elif key in KEYED_ARRAYS and isinstance(old_val, list) and isinstance(new_val, list):
-            col_noise = COLUMN_NOISE_FIELDS if key == "columns" else frozenset()
+            col_noise: frozenset[str] = (
+                COLUMN_NOISE_FIELDS if key == "columns" else _EMPTY_FROZENSET
+            )
             changes.extend(
-                _compare_keyed_arrays(old_val, new_val, field_path, KEYED_ARRAYS[key], col_noise)
+                _compare_keyed_arrays(
+                    cast(list[dict[str, Any]], old_val),
+                    cast(list[dict[str, Any]], new_val),
+                    field_path,
+                    KEYED_ARRAYS[key],
+                    col_noise,
+                )
             )
         elif key in ATOMIC_FIELDS or not isinstance(old_val, (dict, list)):
             severity = _classify_severity(field_path, ChangeType.MODIFIED)
@@ -234,7 +245,11 @@ def _compare_dicts(
                 )
             )
         elif isinstance(old_val, dict) and isinstance(new_val, dict):
-            changes.extend(_compare_dicts(old_val, new_val, field_path))
+            changes.extend(
+                _compare_dicts(
+                    cast(dict[str, Any], old_val), cast(dict[str, Any], new_val), field_path
+                )
+            )
         else:
             # Non-keyed list or mixed types — compare as atomic.
             severity = _classify_severity(field_path, ChangeType.MODIFIED)
@@ -243,8 +258,8 @@ def _compare_dicts(
                     field_path=field_path,
                     change_type=ChangeType.MODIFIED,
                     severity=severity,
-                    old_value=old_val,
-                    new_value=new_val,
+                    old_value=cast(object, old_val),
+                    new_value=cast(object, new_val),
                 )
             )
 
@@ -266,7 +281,7 @@ def _build_summary(changes: list[FieldChange]) -> str:
     minor = sum(1 for c in changes if c.severity == ChangeSeverity.MINOR)
     patch = n - major - minor
 
-    parts = []
+    parts: list[str] = []
     if major:
         parts.append(f"{major} major")
     if minor:
@@ -293,7 +308,9 @@ class MetadataDiffer:
         """
         self._client = client
 
-    def diff_versions(self, old: dict, new: dict, entity_type: str) -> EntityDiff:
+    def diff_versions(
+        self, old: dict[str, Any], new: dict[str, Any], entity_type: str
+    ) -> EntityDiff:
         """Compare two raw version snapshot dicts and return a structured diff.
 
         Args:
@@ -354,10 +371,19 @@ class MetadataDiffer:
 
         if to_version is None:
             to_version = str(versions[-1])
+        elif to_version not in versions:
+            raise NoDiffAvailable(f"Version '{to_version}' not found for '{fqn}'.")
 
         if from_version is None:
             idx = versions.index(to_version)
+            if idx == 0:
+                raise NoDiffAvailable(
+                    f"Version '{to_version}' is the first version of '{fqn}'"
+                    " — nothing to diff against."
+                )
             from_version = str(versions[idx - 1])
+        elif from_version not in versions:
+            raise NoDiffAvailable(f"Version '{from_version}' not found for '{fqn}'.")
 
         old_snap = self._client.get_version(entity_type, entity_id, from_version)
         new_snap = self._client.get_version(entity_type, entity_id, to_version)

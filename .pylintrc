@@ -1,0 +1,28 @@
+[MASTER]
+# Pylint configuration for ometa-diff
+
+[MESSAGES CONTROL]
+disable =
+    # Deferred imports in CLI commands (lazy-load to speed up --help) and in
+    # mcp_server.create_server() (optional mcp dependency guard) are intentional.
+    import-outside-toplevel,
+    # MCP server tools must catch all exceptions — crashing the server process
+    # would break the LLM's tool-calling session.
+    broad-exception-caught,
+    # Pytest fixtures and common test patterns trigger these warnings.
+    missing-class-docstring,
+    missing-function-docstring,
+    redefined-outer-name,
+    protected-access,
+    unused-argument,
+    too-few-public-methods,
+    duplicate-code
+
+[DESIGN]
+# Typer CLI commands expose one argument per CLI flag; 8 is reasonable.
+max-args = 8
+max-positional-arguments = 8
+# CLI command functions accumulate locals for each exception branch.
+max-locals = 22
+# _classify_severity maps many field paths; 10 return statements is fine.
+max-returns = 10
