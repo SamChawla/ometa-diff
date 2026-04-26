@@ -28,9 +28,9 @@ jobs:
         run: python -m pip install --upgrade pip build setuptools wheel
 
       - name: Install dependencies
-        # Install dev deps only for the test matrix to avoid pulling optional MCP
-        # extras (heavy/optional) unless explicitly needed by a job.
-        run: pip install -e ".[dev]"
+        # Install from GitHub at the exact commit under test so CI validates the
+        # pushed state, not a locally built editable install.
+        run: pip install "ometa-diff[dev] @ git+https://github.com/SamChawla/ometa-diff.git@${{ github.sha }}"
 
       - name: Lint
         run: ruff check src/ tests/
