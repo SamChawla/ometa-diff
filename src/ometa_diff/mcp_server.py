@@ -166,6 +166,7 @@ def create_server() -> Any:
                 builder = ChangelogBuilder(client)
                 log = builder.for_catalog(since_days=since_days)
 
+                patch_changes = log.total_changes - log.major_changes - log.minor_changes
                 lines = [
                     f"## Metadata Activity Summary — Last {since_days} Days",
                     "",
@@ -175,7 +176,7 @@ def create_server() -> Any:
                     f"| Total field changes | {log.total_changes} |",
                     f"| Major changes | {log.major_changes} |",
                     f"| Minor changes | {log.minor_changes} |",
-                    f"| Patch changes | {log.total_changes - log.major_changes - log.minor_changes} |",  # noqa: E501
+                    f"| Patch changes | {patch_changes} |",
                     "",
                 ]
 
