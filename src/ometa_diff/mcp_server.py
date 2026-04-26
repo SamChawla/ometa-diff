@@ -68,12 +68,12 @@ def create_server() -> Any:
             Formatted diff report as markdown text.
         """
         try:
-            client = _om_client.client_from_env()
-            differ = MetadataDiffer(client)
-            result = differ.diff_entity(
-                entity_type, entity_fqn, from_version=from_version, to_version=to_version
-            )
-            return format_diff(result, OutputFormat.MARKDOWN)
+            with _om_client.client_from_env() as client:
+                differ = MetadataDiffer(client)
+                result = differ.diff_entity(
+                    entity_type, entity_fqn, from_version=from_version, to_version=to_version
+                )
+                return format_diff(result, OutputFormat.MARKDOWN)
         except NoDiffAvailable as exc:
             return f"No diff available: {exc}"
         except OmetaDiffError as exc:
@@ -110,22 +110,24 @@ def create_server() -> Any:
             Aggregated changelog as markdown text.
         """
         try:
-            client = _om_client.client_from_env()
-            builder = ChangelogBuilder(client)
+            with _om_client.client_from_env() as client:
+                builder = ChangelogBuilder(client)
 
-            if scope.startswith("service:"):
-                service_name = scope[len("service:") :]
-                log = builder.for_service(service_name, since_days=since_days)
-            elif scope.startswith("type:"):
-                entity_type = scope[len("type:") :]
-                log = builder.for_entity_type(entity_type, since_days=since_days)
-            elif scope.startswith("user:"):
-                username = scope[len("user:") :]
-                log = builder.for_user(username, since_days=since_days)
-            else:
-                return "Invalid scope format. Use 'service:name', 'type:table', or 'user:admin'."
+                if scope.startswith("service:"):
+                    service_name = scope[len("service:") :]
+                    log = builder.for_service(service_name, since_days=since_days)
+                elif scope.startswith("type:"):
+                    entity_type = scope[len("type:") :]
+                    log = builder.for_entity_type(entity_type, since_days=since_days)
+                elif scope.startswith("user:"):
+                    username = scope[len("user:") :]
+                    log = builder.for_user(username, since_days=since_days)
+                else:
+                    return (
+                        "Invalid scope format. Use 'service:name', 'type:table', or 'user:admin'."
+                    )
 
-            return format_changelog(log, OutputFormat.MARKDOWN)
+                return format_changelog(log, OutputFormat.MARKDOWN)
         except OmetaDiffError as exc:
             return f"Error: {exc}"
         except Exception as exc:  # noqa: BLE001
@@ -144,6 +146,7 @@ def create_server() -> Any:
             "'Who is changing the most metadata?', "
             "or 'How many major changes happened this week?'. "
             "Returns total change counts, major/minor breakdown, and top changers. "
+            "Scans tables, dashboards, pipelines, topics, and ML models. "
             "Requires OPENMETADATA_HOST and OPENMETADATA_JWT_TOKEN environment variables."
         ),
     )
@@ -159,34 +162,34 @@ def create_server() -> Any:
             Summary statistics as markdown text.
         """
         try:
-            client = _om_client.client_from_env()
-            builder = ChangelogBuilder(client)
-            log = builder.for_entity_type("table", since_days=since_days)
+            with _om_client.client_from_env() as client:
+                builder = ChangelogBuilder(client)
+                log = builder.for_catalog(since_days=since_days)
 
-            lines = [
-                f"## Metadata Activity Summary — Last {since_days} Days",
-                "",
-                "| Metric | Value |",
-                "|--------|-------|",
-                f"| Entities changed | {log.total_entities_changed} |",
-                f"| Total field changes | {log.total_changes} |",
-                f"| Major changes | {log.major_changes} |",
-                f"| Minor changes | {log.minor_changes} |",
-                f"| Patch changes | {log.total_changes - log.major_changes - log.minor_changes} |",
-                "",
-            ]
-
-            if log.top_changers:
-                lines += [
-                    "### Top Changers",
+                lines = [
+                    f"## Metadata Activity Summary — Last {since_days} Days",
                     "",
-                    "| User | Changes |",
-                    "|------|---------|",
+                    "| Metric | Value |",
+                    "|--------|-------|",
+                    f"| Entities changed | {log.total_entities_changed} |",
+                    f"| Total field changes | {log.total_changes} |",
+                    f"| Major changes | {log.major_changes} |",
+                    f"| Minor changes | {log.minor_changes} |",
+                    f"| Patch changes | {log.total_changes - log.major_changes - log.minor_changes} |",  # noqa: E501
+                    "",
                 ]
-                for entry in log.top_changers[:5]:
-                    lines.append(f"| {entry['user']} | {entry['change_count']} |")
 
-            return "\n".join(lines)
+                if log.top_changers:
+                    lines += [
+                        "### Top Changers",
+                        "",
+                        "| User | Changes |",
+                        "|------|---------|",
+                    ]
+                    for entry in log.top_changers[:5]:
+                        lines.append(f"| {entry.user} | {entry.change_count} |")
+
+                return "\n".join(lines)
         except OmetaDiffError as exc:
             return f"Error: {exc}"
         except Exception as exc:  # noqa: BLE001

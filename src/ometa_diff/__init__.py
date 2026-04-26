@@ -17,6 +17,7 @@ from ometa_diff.models import (
     ChangeType,
     EntityDiff,
     FieldChange,
+    TopChanger,
 )
 
 __all__ = [
@@ -31,6 +32,7 @@ __all__ = [
     "ChangeType",
     "ChangeSeverity",
     "FieldChange",
+    "TopChanger",
     "EntityDiff",
     "CatalogChangelog",
 ]

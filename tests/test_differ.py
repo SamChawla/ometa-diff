@@ -202,6 +202,6 @@ class TestMultipleChanges:
         result = differ.diff_versions(table_version_v1, table_version_v2, "table")
         assert result.entity_type == "table"
         assert result.entity_fqn == "my_service.prod_db.public.payments"
-        assert result.from_version == 0.1
-        assert result.to_version == 0.2
+        assert result.from_version == "0.1"
+        assert result.to_version == "0.2"
         assert result.updated_by == "alice"

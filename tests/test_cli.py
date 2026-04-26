@@ -21,8 +21,8 @@ def sample_diff() -> EntityDiff:
         entity_type="table",
         entity_fqn="my_service.prod_db.public.payments",
         entity_id="abc-123",
-        from_version=0.1,
-        to_version=0.2,
+        from_version="0.1",
+        to_version="0.2",
         updated_by="alice",
         updated_at=datetime(2026, 4, 18, 14, 30, tzinfo=timezone.utc),
         changes=[

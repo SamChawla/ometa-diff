@@ -51,7 +51,7 @@ def _build_client() -> OMVersionClient:
         return client_from_env()
     except (OMConnectionError, OMAuthError) as exc:
         _err.print(f"[red]{exc}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
 
 
 def _fmt_to_output_format(fmt: FormatOption) -> OutputFormat:
@@ -80,7 +80,9 @@ def diff(
     ),
     to_version: str | None = typer.Option(None, "--to", help="Later version (default: latest)"),
     since: str | None = typer.Option(None, "--since", help="Time window, e.g. 7d"),
-    fmt: FormatOption = typer.Option(FormatOption.TERMINAL, "--format", "-f", help="Output format"),
+    fmt: FormatOption = typer.Option(  # noqa: B008
+        FormatOption.TERMINAL, "--format", "-f", help="Output format"
+    ),
 ) -> None:
     """Show what changed between two versions of a metadata entity."""
     from ometa_diff.differ import MetadataDiffer
@@ -113,19 +115,19 @@ def diff(
             _print_output(format_diff(result, output_fmt), fmt)
     except NoDiffAvailable as exc:
         _err.print(f"[yellow]{exc}[/yellow]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
     except OMNotFoundError as exc:
         _err.print(f"[red]Entity not found: {exc}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
     except OMAuthError as exc:
         _err.print(f"[red]Authentication failed: {exc}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
     except OMConnectionError as exc:
         _err.print(f"[red]Cannot connect to OpenMetadata: {exc}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
     except OMAPIError as exc:
         _err.print(f"[red]OpenMetadata API error: {exc}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
 
 
 @app.command()
@@ -134,7 +136,9 @@ def changelog(
     user: str | None = typer.Option(None, "--user", help="Filter by username"),
     entity_type: str | None = typer.Option(None, "--type", help="Filter by entity type"),
     since: str = typer.Option("7d", "--since", help="Time window, e.g. 7d, 30d"),
-    fmt: FormatOption = typer.Option(FormatOption.TERMINAL, "--format", "-f", help="Output format"),
+    fmt: FormatOption = typer.Option(  # noqa: B008
+        FormatOption.TERMINAL, "--format", "-f", help="Output format"
+    ),
 ) -> None:
     """Show recent metadata changes across your data catalog."""
     from ometa_diff.changelog import ChangelogBuilder
@@ -160,13 +164,13 @@ def changelog(
             log = builder.for_entity_type(entity_type, since_days=since_days)
     except OMAuthError as exc:
         _err.print(f"[red]Authentication failed: {exc}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
     except OMConnectionError as exc:
         _err.print(f"[red]Cannot connect to OpenMetadata: {exc}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
     except OMAPIError as exc:
         _err.print(f"[red]OpenMetadata API error: {exc}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from exc
 
     _print_output(format_changelog(log, output_fmt), fmt)
 

@@ -96,8 +96,8 @@ class TestFormatDiff:
         output = format_diff(diff_v1_v2, OutputFormat.JSON)
         parsed = json.loads(output)
         assert parsed["entity_fqn"] == "my_service.prod_db.public.payments"
-        assert parsed["from_version"] == 0.1
-        assert parsed["to_version"] == 0.2
+        assert parsed["from_version"] == "0.1"
+        assert parsed["to_version"] == "0.2"
 
     def test_json_changes_list(self, diff_v1_v2):
         output = format_diff(diff_v1_v2, OutputFormat.JSON)

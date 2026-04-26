@@ -41,6 +41,13 @@ class FieldChange(BaseModel):
     new_value: Any | None = None
 
 
+class TopChanger(BaseModel):
+    """A user and their change count within a changelog window."""
+
+    user: str
+    change_count: int
+
+
 class EntityDiff(BaseModel):
     """Diff result between two versions of a single metadata entity."""
 
@@ -49,8 +56,8 @@ class EntityDiff(BaseModel):
     entity_fqn: str
     """Fully qualified name, e.g. 'my_service.db.schema.payments'."""
     entity_id: str
-    from_version: float
-    to_version: float
+    from_version: str
+    to_version: str
     updated_by: str
     updated_at: datetime
     changes: list[FieldChange] = Field(default_factory=list)
@@ -72,5 +79,5 @@ class CatalogChangelog(BaseModel):
     major_changes: int
     minor_changes: int
     entries: list[EntityDiff] = Field(default_factory=list)
-    top_changers: list[dict[str, Any]] = Field(default_factory=list)
-    """Sorted list of most active users, e.g. [{'user': 'admin', 'change_count': 12}]."""
+    top_changers: list[TopChanger] = Field(default_factory=list)
+    """Sorted list of most active users."""

@@ -5,7 +5,19 @@
       "Bash(ruff check *)",
       "Bash(ruff format *)",
       "Bash(pytest tests/ -v)",
-      "Bash(pytest tests/ -v --tb=short)"
+      "Bash(pytest tests/ -v --tb=short)",
+      "Bash(git remote *)",
+      "Bash(pytest tests/ -v --ignore=tests/test_integration.py)",
+      "Bash(pytest tests/ -v --ignore=tests/test_integration.py -q)",
+      "Bash(pylint src/ometa_diff/ --rcfile=.pylintrc)",
+      "Bash(bash -c 'read input; cmd=$\\(echo \"$input\" | python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d[\\\\\"tool_input\\\\\"][\\\\\"command\\\\\"]\\)\"\\); if echo \"$cmd\" | grep -qE \"^git commit\"; then cd e:/ometa-diff && ruff check src/ tests/ && ruff format --check src/ tests/ && pylint src/ometa_diff/ --rcfile=.pylintrc -q && pytest tests/ -q --ignore=tests/test_integration.py; fi')",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); cmd=d['tool_input']['command']; print\\('is_commit' if 'git commit' in cmd else 'not_commit'\\)\")",
+      "Bash(pylint src/ometa_diff/ --rcfile=.pylintrc -q)",
+      "Bash(pytest tests/ -q --ignore=tests/test_integration.py)",
+      "Bash(pylint src/ometa_diff/ --rcfile=.pylintrc --score=no)",
+      "Bash(python -c \"import json; d=json.load\\(open\\('e:/ometa-diff/.claude/settings.json'\\)\\); hooks=d['hooks']['PreToolUse']; h=next\\(x for x in hooks if x['matcher']=='Bash'\\); cmd=h['hooks'][0]['command']; print\\('OK:', cmd[:80]+'...'\\)\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

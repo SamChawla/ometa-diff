@@ -69,8 +69,8 @@ class TestChangelogForService:
         result = builder.for_service("my_service", since_days=7)
 
         assert len(result.top_changers) == 1
-        assert result.top_changers[0]["user"] == "alice"
-        assert result.top_changers[0]["change_count"] == 1
+        assert result.top_changers[0].user == "alice"
+        assert result.top_changers[0].change_count == 1
 
     def test_empty_when_no_entities_found(self, mock_om_client, monkeypatch):
         monkeypatch.setattr(mock_om_client, "search_entities", lambda **kw: [])

@@ -170,13 +170,10 @@ def table_version_v3() -> dict[str, Any]:
 
 
 @pytest.fixture
-def mock_om_client(monkeypatch) -> OMVersionClient:
+def mock_om_client() -> OMVersionClient:
     """OMVersionClient with HTTP calls replaced by in-memory data.
 
     Tests should monkeypatch specific methods as needed rather than hitting
     a real OpenMetadata instance.
     """
-
-    # Build a real client pointed at a non-existent host; tests override methods.
-    client = OMVersionClient(host="http://localhost:8585/api", token="test-token")
-    return client
+    return OMVersionClient(host="http://localhost:8585/api", token="test-token")

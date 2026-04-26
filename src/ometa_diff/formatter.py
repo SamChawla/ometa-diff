@@ -62,9 +62,10 @@ def _format_diff_terminal(diff: EntityDiff) -> str:
             label = _SEVERITY_LABEL[change.severity]
             ct = change.change_type.value.upper()
             lines.append(f"  {label}  [bold]{change.field_path}[/bold] - {ct}")
-            if change.change_type == ChangeType.MODIFIED:
+            if change.change_type in (ChangeType.MODIFIED, ChangeType.REMOVED):
                 if change.old_value is not None:
                     lines.append(f"             [red]- {_truncate(change.old_value)}[/red]")
+            if change.change_type in (ChangeType.MODIFIED, ChangeType.ADDED):
                 if change.new_value is not None:
                     lines.append(f"             [green]+ {_truncate(change.new_value)}[/green]")
     else:
@@ -94,8 +95,16 @@ def _format_diff_markdown(diff: EntityDiff) -> str:
         for change in diff.changes:
             sev = _SEVERITY_MD[change.severity]
             ct = change.change_type.value.upper()
-            old = _truncate(change.old_value) if change.old_value is not None else ""
-            new = _truncate(change.new_value) if change.new_value is not None else ""
+            old = (
+                _truncate(change.old_value).replace("|", "\\|")
+                if change.old_value is not None
+                else ""
+            )
+            new = (
+                _truncate(change.new_value).replace("|", "\\|")
+                if change.new_value is not None
+                else ""
+            )
             lines.append(f"| {sev} | `{change.field_path}` | {ct} | {old} | {new} |")
 
     return "\n".join(lines)
@@ -151,7 +160,7 @@ def _format_changelog_terminal(log: CatalogChangelog) -> str:
 
     if log.top_changers:
         changer_str = ", ".join(
-            f"[cyan]{c['user']}[/cyan] ({c['change_count']})" for c in log.top_changers[:5]
+            f"[cyan]{c.user}[/cyan] ({c.change_count})" for c in log.top_changers[:5]
         )
         lines.append(f"Top changers: {changer_str}")
 
@@ -200,7 +209,7 @@ def _format_changelog_markdown(log: CatalogChangelog) -> str:
         lines.append("| User | Changes |")
         lines.append("|------|---------|")
         for c in log.top_changers[:10]:
-            lines.append(f"| `{c['user']}` | {c['change_count']} |")
+            lines.append(f"| `{c.user}` | {c.change_count} |")
 
     if log.entries:
         lines.append("")

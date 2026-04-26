@@ -9,7 +9,37 @@ from typing import Any
 from ometa_diff.client import OMVersionClient
 from ometa_diff.differ import MetadataDiffer
 from ometa_diff.exceptions import NoDiffAvailable, OmetaDiffError, OMNotFoundError
-from ometa_diff.models import CatalogChangelog, ChangeSeverity, EntityDiff
+from ometa_diff.models import CatalogChangelog, ChangeSeverity, EntityDiff, TopChanger
+
+# Entity types scanned by for_catalog.
+_CATALOG_ENTITY_TYPES: tuple[str, ...] = (
+    "table",
+    "dashboard",
+    "pipeline",
+    "topic",
+    "mlmodel",
+)
+
+_PAGE_SIZE = 200
+
+
+def _search_all(
+    client: OMVersionClient,
+    query: str,
+    entity_type: str | None = None,
+) -> list[dict[str, Any]]:
+    """Fetch all search results by paginating through OM's search API."""
+    all_results: list[dict[str, Any]] = []
+    offset = 0
+    while True:
+        page = client.search_entities(
+            query=query, entity_type=entity_type, limit=_PAGE_SIZE, offset=offset
+        )
+        all_results.extend(page)
+        if len(page) < _PAGE_SIZE:
+            break
+        offset += _PAGE_SIZE
+    return all_results
 
 
 def _aggregate(
@@ -21,7 +51,7 @@ def _aggregate(
     """Build a CatalogChangelog from a flat list of EntityDiff objects."""
     changer_counts: Counter[str] = Counter(d.updated_by for d in all_diffs if d.updated_by)
     top_changers = [
-        {"user": user, "change_count": count} for user, count in changer_counts.most_common(10)
+        TopChanger(user=user, change_count=count) for user, count in changer_counts.most_common(10)
     ]
 
     total_changes = sum(len(d.changes) for d in all_diffs)
@@ -36,7 +66,7 @@ def _aggregate(
         scope=scope,
         from_date=from_date,
         to_date=to_date,
-        total_entities_changed=len(all_diffs),
+        total_entities_changed=len({d.entity_fqn for d in all_diffs}),
         total_changes=total_changes,
         major_changes=major_changes,
         minor_changes=minor_changes,
@@ -103,10 +133,7 @@ class ChangelogBuilder:
         now = datetime.now(tz=timezone.utc)
         from_date = now - timedelta(days=since_days)
 
-        entities = self._client.search_entities(
-            query=f"service.name:{service_name}",
-            limit=200,
-        )
+        entities = _search_all(self._client, query=f"service.name:{service_name}")
         all_diffs = _diffs_for_entities(entities, self._differ, since_days)
         return _aggregate(f"service:{service_name}", from_date, now, all_diffs)
 
@@ -123,11 +150,7 @@ class ChangelogBuilder:
         now = datetime.now(tz=timezone.utc)
         from_date = now - timedelta(days=since_days)
 
-        entities = self._client.search_entities(
-            query="*",
-            entity_type=entity_type,
-            limit=200,
-        )
+        entities = _search_all(self._client, query="*", entity_type=entity_type)
         all_diffs = _diffs_for_entities(entities, self._differ, since_days)
         return _aggregate(f"type:{entity_type}", from_date, now, all_diffs)
 
@@ -147,6 +170,30 @@ class ChangelogBuilder:
         now = datetime.now(tz=timezone.utc)
         from_date = now - timedelta(days=since_days)
 
-        entities = self._client.search_entities(query="*", limit=200)
+        entities = _search_all(self._client, query="*")
         all_diffs = _diffs_for_entities(entities, self._differ, since_days, user_filter=username)
         return _aggregate(f"user:{username}", from_date, now, all_diffs)
+
+    def for_catalog(self, since_days: int = 7) -> CatalogChangelog:
+        """Aggregate changes across all major entity types in the catalog.
+
+        Scans tables, dashboards, pipelines, topics, and ML models.
+
+        Args:
+            since_days: How many days back to scan.
+
+        Returns:
+            CatalogChangelog with scope 'catalog'.
+        """
+        now = datetime.now(tz=timezone.utc)
+        from_date = now - timedelta(days=since_days)
+
+        all_diffs: list[EntityDiff] = []
+        for entity_type in _CATALOG_ENTITY_TYPES:
+            try:
+                entities = _search_all(self._client, query="*", entity_type=entity_type)
+                all_diffs.extend(_diffs_for_entities(entities, self._differ, since_days))
+            except OmetaDiffError:
+                continue
+
+        return _aggregate("catalog", from_date, now, all_diffs)

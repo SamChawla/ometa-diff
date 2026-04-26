@@ -215,18 +215,20 @@ class OMVersionClient:
         query: str,
         entity_type: str | None = None,
         limit: int = 100,
+        offset: int = 0,
     ) -> list[dict[str, Any]]:
         """Search for entities using OM's search API.
 
         Args:
             query: Search query string (supports wildcards).
             entity_type: Optional filter to a specific entity type.
-            limit: Maximum results to return.
+            limit: Maximum results to return per page.
+            offset: Number of results to skip (for pagination).
 
         Returns:
             List of entity source dicts from the search hits.
         """
-        params: dict[str, Any] = {"q": query, "limit": limit}
+        params: dict[str, Any] = {"q": query, "limit": limit, "from": offset}
         if entity_type:
             params["index"] = f"{entity_type}_search_index"
         data = self._get("/v1/search/query", params=params)

@@ -18,7 +18,7 @@ from typing import Any
 import pytest
 
 from ometa_diff.changelog import ChangelogBuilder
-from ometa_diff.client import OMVersionClient
+from ometa_diff.client import OMVersionClient, _version_sort_key
 from ometa_diff.differ import MetadataDiffer
 from ometa_diff.exceptions import NoDiffAvailable, OMAuthError, OMNotFoundError
 from ometa_diff.models import ChangeSeverity, EntityDiff
@@ -144,8 +144,8 @@ def test_list_versions(client: OMVersionClient, any_versioned_entity: _EntityFix
     """list_versions returns a sorted list of version strings."""
     versions = any_versioned_entity["versions"]
     assert len(versions) >= 2
-    floats = [float(v) for v in versions]
-    assert floats == sorted(floats), "Versions are not sorted"
+    keys = [_version_sort_key(v) for v in versions]
+    assert keys == sorted(keys), "Versions are not sorted"
 
 
 def test_get_version_returns_snapshot(
@@ -176,7 +176,7 @@ def test_diff_entity_returns_entity_diff(
     )
     assert isinstance(result, EntityDiff)
     assert result.entity_fqn == any_versioned_entity["fqn"]
-    assert result.from_version < result.to_version
+    assert _version_sort_key(result.from_version) < _version_sort_key(result.to_version)
 
 
 def test_diff_entity_changes_have_valid_severity(
@@ -216,8 +216,8 @@ def test_diff_entity_explicit_versions(
         from_version=versions[0],
         to_version=versions[-1],
     )
-    assert float(result.from_version) == float(versions[0])
-    assert float(result.to_version) == float(versions[-1])
+    assert result.from_version == versions[0]
+    assert result.to_version == versions[-1]
 
 
 def test_diff_entity_invalid_version_raises(
@@ -272,10 +272,10 @@ def test_changelog_aggregates_counts(
 
 
 def test_changelog_top_changers_format(client: OMVersionClient) -> None:
-    """top_changers entries have 'user' and 'change_count' keys."""
+    """top_changers entries are TopChanger models with user and change_count."""
     builder = ChangelogBuilder(client)
     log = builder.for_entity_type("table", since_days=3650)
     for entry in log.top_changers:
-        assert "user" in entry
-        assert "change_count" in entry
-        assert isinstance(entry["change_count"], int)
+        assert isinstance(entry.user, str)
+        assert isinstance(entry.change_count, int)
+        assert entry.change_count >= 0
