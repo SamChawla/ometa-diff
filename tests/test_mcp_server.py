@@ -7,6 +7,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.importorskip("mcp", reason="mcp extra not installed; skipping MCP server tests")
+
 from ometa_diff.models import CatalogChangelog, ChangeSeverity, ChangeType, EntityDiff, FieldChange
 
 
